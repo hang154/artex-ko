@@ -1490,6 +1490,29 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
+	// profile 을 지정한 요청은 저장된 profile 의 format/model/base_url/session_header_key 를
+	// 기준값으로 삼는다. 폼이 지정한 값만 저장값을 덮어쓴다(UI 의 저장 키/설정을 그대로 검증해야
+	// 하고, 저장 profile 의 형식이 openai 이면 provider="" 로는 anthropic 분기가 선택되어
+	// profile 의 model/base_url 이 무시되고 전역 기본값으로 날아가 버리는 문제를 막는다).
+	if req.ProfileID != nil {
+		if p, err := s.m.pg.ProfileByID(*req.ProfileID); err == nil && p != nil {
+			if req.Provider == "" {
+				req.Provider = p.Format
+			}
+			if req.Model == "" {
+				req.Model = p.Model
+			}
+			if req.BaseURL == "" {
+				req.BaseURL = p.BaseURL
+			}
+			if req.SessionHeaderKey == "" {
+				req.SessionHeaderKey = p.SessionHeaderKey
+			}
+			if req.APIKey == "" {
+				req.APIKey = p.APIKey
+			}
+		}
+	}
 	cfg := agent.ConfigFrom(req.Provider, req.Model, req.BaseURL, req.APIKey, req.Proxy)
 	// mirror production: send the SAME thinking params so a provider that rejects the
 	// reasoning_effort/thinking field fails the test too (no false "test ok, run 400").
@@ -1509,10 +1532,17 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 	// 会话头名同理：表单未带时用已存 profile 的值兜底。
 	if req.ProfileID != nil && (cfg.APIKey == "" || cfg.SessionHeaderKey == "") {
 		if p, err := s.m.pg.ProfileByID(*req.ProfileID); err == nil && p != nil {
-			if cfg.APIKey == "" {
+			if p.APIKey != "" {
+				// profile 키가 있으면 그걸 쓴다. 폼/전역 기본값이 이미 cfg.APIKey 를
+				// 채운 경우라도 profile 키가 우선한다(UI 의 저장 키가 유효하고, 전역
+				// 기본값은 다른 provider 가 쓰다 못 쓰게 된 경우가 흔함).
+				cfg.APIKey = p.APIKey
+			} else if cfg.APIKey == "" {
 				cfg.APIKey = p.APIKey
 			}
-			if cfg.SessionHeaderKey == "" {
+			if p.SessionHeaderKey != "" {
+				cfg.SessionHeaderKey = p.SessionHeaderKey
+			} else if cfg.SessionHeaderKey == "" {
 				cfg.SessionHeaderKey = p.SessionHeaderKey
 			}
 		}

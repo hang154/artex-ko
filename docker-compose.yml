@@ -17,7 +17,7 @@ services:
   artex:
     # 이 포크가 릴리스 태그(v*)마다 GitHub Container Registry 에 발행하는 이미지입니다
     # (.github/workflows/release.yml 의 docker 잡). 상류 autumn27/artex 는 Docker Hub 에서 내려갔습니다.
-    image: ghcr.io/jiwoochris/artex-global:${ARTEX_TAG:-latest}
+    image: ${ARTEX_EXPERIMENT_IMAGE:-ghcr.io/jiwoochris/artex-global:${ARTEX_TAG:-latest}}
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,6 +52,9 @@ services:
       # 프로젝트 루트의 skills 를 컨테이너에 마운트합니다(이미지에 내장된 /app/skills 를 덮어씁니다).
       # skill 을 고치면 이미지를 다시 빌드할 필요 없이, 컨테이너가 호스트의 이 파일을 그대로 읽습니다.
       - ./skills:/app/skills
+      # 실험용: heretic2 API의 2개 모델을 ARTEX LLM 폴로에 등록하기 위해 키 파일을 마운트한다.
+      # 이미지 내 전역 기본값(/api_key.txt)을 호스트 키로 재정의한다. 프로필은 DB에 저장되어 재시작에도 유지된다.
+      - /home/user-btc/다운로드/api_key.txt:/api_key.txt:ro
     restart: unless-stopped
 
 volumes:

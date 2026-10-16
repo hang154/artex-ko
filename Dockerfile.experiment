@@ -1,0 +1,3 @@
+FROM ghcr.io/jiwoochris/artex-global:latest
+# 실험용 패치: testLLM 이 profile 키 없이 요청돼도 저장된 profile 키를 쓰도록 (server.go)
+COPY dist/amd64/artex /app/artex

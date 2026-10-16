@@ -1,0 +1,24 @@
+# Start/update (run from this directory):
+# docker compose -p usf-artex -f docker-compose.yml -f docker-compose.lab.yml up -d
+# Stop only the training target:
+# docker compose -p usf-artex -f docker-compose.yml -f docker-compose.lab.yml stop juice-shop
+# Browser: http://127.0.0.1:3001
+# Target URL from ARTEX: http://juice-shop:3000
+# Training state is disposable; force-recreate juice-shop to reset it.
+services:
+  artex:
+    networks:
+      - default
+      - juice-training
+
+  juice-shop:
+    image: bkimminich/juice-shop@sha256:42843723a7bf4246aa5d63c324978b17ef296ac78434aeddd34c427bfb5853f4
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - juice-training
+    restart: unless-stopped
+
+networks:
+  juice-training:
+    driver: bridge
